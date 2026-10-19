@@ -23,7 +23,7 @@ class Navbar(ctk.CTk):
         self.toggle_button.pack(padx=10,pady=10, anchor="w", side="left")
 
         self.nav_buttons = []
-        for text in ["Map", "Add Location", "Add Informations"]:
+        for text in ["Map", "Add Location", "Add Informations", "Edit Location", "Edit Informations", "Delete Location", "Delete Informations"]:
             btn = Button(self.navbar_frame, text=text, bg="#1c8c25", fg="#FFFFFF", font=("Arial, 14"), relief="flat",cursor="hand2", anchor="center", command=lambda t=text: self.navigate_to(t))
             btn.pack(fill="x", pady=5, padx=10, side="left")
             self.nav_buttons.append(btn)
@@ -45,14 +45,45 @@ class Navbar(ctk.CTk):
                 btn.pack(fill="x", pady=5, padx=10, side="left")
             self.navbar_expand = True
 
+    form_active = False
     def navigate_to(self, page_name):
-        self.content_label.config(text=f"{page_name}")
+        if self.form_active: 
+            self.content_frame.form_frame.pack_forget()
+        match page_name:
+            case "Add Location":
+                self.content_label.pack_forget()
+                self.content_frame.form_frame = Frame(self.content_frame, bg="#000000", height=600, width=600, pady=20, padx=50)
+                self.content_frame.form_frame.pack()
+                self.form_active = True
+                self.location_inputs = ["Name", "X-Coordinate", "Y-Coordinate"]
+                self.location_values = []
+                for input in self.location_inputs:
+                    input_frame = Frame(self.content_frame.form_frame, bg="#000000", pady=20)
+                    input_frame.pack()
+                    label = ctk.CTkLabel(input_frame, text="Enter Location " + input + ": ", width=200)
+                    label.pack(side="left")
+                    textbox = ctk.CTkEntry(input_frame)
+                    textbox.pack(side="right")
+                    self.location_values.append(textbox)
+                input_frame = Frame(self.content_frame.form_frame, bg="#000000", pady=20)
+                input_frame.pack()
+                button = ctk.CTkButton(input_frame, text="Submit", command=self.add_location, fg_color="#343638")
+                button.pack(side="left")
+            case _:
+                self.content_label = Label(self.content_frame, text="Tour Creator", bg="#1f6b2e", font=("Arial", 24), anchor="center")
+                self.content_label.pack(expand=True)
+                print("XD")
+
+    def add_location(self):
+        values = [textbox.get().strip() for textbox in self.location_values]
+        print(values)
+        #walidacja danych i dodawanie nowych lokalizacji do bazy danyuch Mikołaj
+
+    def get_all_locations(self):
+        print("XD")
+        #zwracanie listy nazw i id wszystkich lokalizacji z bazy danych najlepiej w formie słownika np.: locations = [{"Id": value, "Name": value}] Mikołaj
+    
 
 app = Navbar()
 app.mainloop()
 
-# window = ctk.CTk()
-# window.title("Tour Creator")
-# window.geometry("1200x800")
-# ctk.set_appearance_mode("dark")
-# window.mainloop()
