@@ -1,5 +1,11 @@
 import customtkinter as ctk
 from tkinter import *
+import math
+import sqlite3
+from pathlib import Path
+
+
+DATABASE_PATH = Path(__file__).with_name("database.db")
 
 class Navbar(ctk.CTk):
     def __init__(self):
@@ -69,21 +75,72 @@ class Navbar(ctk.CTk):
                 input_frame.pack()
                 button = ctk.CTkButton(input_frame, text="Submit", command=self.add_location, fg_color="#343638")
                 button.pack(side="left")
+                self.location_message = ctk.CTkLabel(self.content_frame.form_frame, text="")
+                self.location_message.pack(pady=(0, 10))
             case _:
                 self.content_label = Label(self.content_frame, text="Tour Creator", bg="#1f6b2e", font=("Arial", 24), anchor="center")
                 self.content_label.pack(expand=True)
                 print("XD")
 
     def add_location(self):
-        values = [textbox.get().strip() for textbox in self.location_values]
-        print(values)
-        #walidacja danych i dodawanie nowych lokalizacji do bazy danyuch Mikołaj
+        """Validate form fields and save a new place to the SQLite database."""
+        name, x_coordinate, y_coordinate = (
+            textbox.get().strip() for textbox in self.location_values
+        )
+
+        if not name:
+            self.location_message.configure(
+                text="Podaj nazwę lokalizacji.", text_color="#ff6b6b"
+            )
+            return
+
+        try:
+            x_coordinate = float(x_coordinate)
+            y_coordinate = float(y_coordinate)
+            if not math.isfinite(x_coordinate) or not math.isfinite(y_coordinate):
+                raise ValueError
+        except ValueError:
+            self.location_message.configure(
+                text="Współrzędne muszą być liczbami.", text_color="#ff6b6b"
+            )
+            return
+
+        try:
+            with sqlite3.connect(DATABASE_PATH) as connection:
+                connection.execute(
+                    """
+                    INSERT INTO places (name, coordinate_x, coordinate_y)
+                    VALUES (?, ?, ?)
+                    """,
+                    (name, x_coordinate, y_coordinate),
+                )
+        except sqlite3.Error as error:
+            self.location_message.configure(
+                text=f"Nie udało się zapisać lokalizacji: {error}", text_color="#ff6b6b"
+            )
+            return
+
+        for textbox in self.location_values:
+            textbox.delete(0, END)
+        self.location_message.configure(
+            text="Lokalizacja została dodana.", text_color="#61d46b"
+        )
 
     def get_all_locations(self):
-        print("XD")
-        #zwracanie listy nazw i id wszystkich lokalizacji z bazy danych najlepiej w formie słownika np.: locations = [{"Id": value, "Name": value}] Mikołaj
+        """Return all places as dictionaries containing their ID and name."""
+        try:
+            with sqlite3.connect(DATABASE_PATH) as connection:
+                rows = connection.execute(
+                    "SELECT place_id, name FROM places ORDER BY name"
+                ).fetchall()
+        except sqlite3.Error as error:
+            print(f"Nie udało się odczytać lokalizacji: {error}")
+            return []
+
+        return [{"Id": place_id, "Name": name} for place_id, name in rows]
     
 
-app = Navbar()
-app.mainloop()
+if __name__ == "__main__":
+    app = Navbar()
+    app.mainloop()
 
