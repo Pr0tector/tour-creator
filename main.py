@@ -79,8 +79,13 @@ class Navbar(ctk.CTk):
                 self.location_message.pack(pady=(0, 10))
             case "Add Informations":
                 self.content_label.pack_forget()
-                self.content_frame.form_frame = Frame(self.content_frame, bg="#000000", height=600, width=600, pady=20, padx=50)
-                self.content_frame.form_frame.pack()
+                self.content_frame.form_frame = ctk.CTkScrollableFrame(
+                    self.content_frame,
+                    fg_color="#000000",
+                )
+                self.content_frame.form_frame.pack(
+                    fill="both", expand=True, padx=20, pady=20
+                )
                 self.form_active = True
                 self.location_inputs = ["Name", "Opening Time", "Closing Time", "Visit Duration", "Entry Price", "Country", "City", "Address", "Description"]
                 self.location_values = []
@@ -162,13 +167,98 @@ class Navbar(ctk.CTk):
         )
 
     def add_description(self):
-        place, opening_time, closing_time, visit_duration, entry_price, country, city, address = (
-            textbox.get().strip() for textbox in self.location_values[:-1]
-        )
-        place_id = place.split()[0]
+        """Validate and save information associated with the selected place."""
+        (
+            place,
+            opening_time,
+            closing_time,
+            visit_duration,
+            entry_price,
+            country,
+            city,
+            address,
+        ) = (textbox.get().strip() for textbox in self.location_values[:-1])
         description = self.location_values[-1].get("1.0", "end").strip()
-        print(place_id, opening_time, closing_time, visit_duration, entry_price, country, city, address, description)
-        #Dodawanie opisu do tabeli z opisami, uznajmny, że visit_duration będzie zapisywane w formi 1:30, przed : jest liczba godzin, a po : jest liczba minut Mikołaj
+
+        try:
+            place_id = int(place.split(maxsplit=1)[0])
+        except (IndexError, ValueError):
+            self.location_message.configure(
+                text="Wybierz poprawną lokalizację.", text_color="#ff6b6b"
+            )
+            return
+
+        hours, separator, minutes = visit_duration.partition(":")
+        if (
+            not separator
+            or not hours.isdigit()
+            or not minutes.isdigit()
+            or int(minutes) > 59
+        ):
+            self.location_message.configure(
+                text="Czas wizyty podaj w formacie godziny:minuty, np. 1:30.",
+                text_color="#ff6b6b",
+            )
+            return
+        visit_duration = f"{int(hours)}:{int(minutes):02d}"
+
+        try:
+            entry_price = float(entry_price)
+            if not math.isfinite(entry_price) or entry_price < 0:
+                raise ValueError
+        except ValueError:
+            self.location_message.configure(
+                text="Cena wstępu musi być liczbą większą lub równą 0.",
+                text_color="#ff6b6b",
+            )
+            return
+
+        try:
+            with sqlite3.connect(DATABASE_PATH) as connection:
+                connection.execute("PRAGMA foreign_keys = ON")
+                place_exists = connection.execute(
+                    "SELECT 1 FROM places WHERE place_id = ?", (place_id,)
+                ).fetchone()
+                if place_exists is None:
+                    self.location_message.configure(
+                        text="Wybrana lokalizacja nie istnieje w bazie.",
+                        text_color="#ff6b6b",
+                    )
+                    return
+
+                connection.execute(
+                    """
+                    INSERT INTO descriptions (
+                        place_id, opening_time, closing_time, visit_duration,
+                        entry_price, country, city, address, description
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        place_id,
+                        opening_time,
+                        closing_time,
+                        visit_duration,
+                        entry_price,
+                        country,
+                        city,
+                        address,
+                        description,
+                    ),
+                )
+        except sqlite3.Error as error:
+            self.location_message.configure(
+                text=f"Nie udało się zapisać informacji: {error}",
+                text_color="#ff6b6b",
+            )
+            return
+
+        for textbox in self.location_values[1:-1]:
+            textbox.delete(0, END)
+        self.location_values[-1].delete("1.0", "end")
+        self.location_message.configure(
+            text="Informacje zostały dodane.", text_color="#61d46b"
+        )
 
     def get_all_locations(self):
         """Return all places as dictionaries containing their ID and name."""
@@ -187,4 +277,3 @@ class Navbar(ctk.CTk):
 if __name__ == "__main__":
     app = Navbar()
     app.mainloop()
-
