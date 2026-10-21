@@ -11,7 +11,7 @@ class Navbar(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("Tour Creator")
-        self.geometry("1200x800")
+        self.geometry("1400x1000")
         ctk.set_appearance_mode("dark")
 
         self.navbar_expand = True
@@ -77,6 +77,41 @@ class Navbar(ctk.CTk):
                 button.pack(side="left")
                 self.location_message = ctk.CTkLabel(self.content_frame.form_frame, text="")
                 self.location_message.pack(pady=(0, 10))
+            case "Add Informations":
+                self.content_label.pack_forget()
+                self.content_frame.form_frame = Frame(self.content_frame, bg="#000000", height=600, width=600, pady=20, padx=50)
+                self.content_frame.form_frame.pack()
+                self.form_active = True
+                self.location_inputs = ["Name", "Opening Time", "Closing Time", "Visit Duration", "Entry Price", "Country", "City", "Address", "Description"]
+                self.location_values = []
+                for input in self.location_inputs:
+                    input_frame = Frame(self.content_frame.form_frame, bg="#000000", pady=20)
+                    input_frame.pack()
+                    if(input == "Name"):
+                        label = ctk.CTkLabel(input_frame, text="Select Location " + input + ": ", width=200)
+                        label.pack(side="left")
+                        locations = self.get_all_locations()
+                        select = ctk.CTkOptionMenu(input_frame, values=locations, fg_color="#343638", button_color="#232527") 
+                        select.pack(side="right")
+                        self.location_values.append(select)
+                    elif(input == "Description"):
+                        label = ctk.CTkLabel(input_frame, text="Enter Location " + input + ": ", width=200)
+                        label.pack(side="left")
+                        textbox = ctk.CTkTextbox(input_frame)
+                        textbox.pack(side="right")
+                        self.location_values.append(textbox)
+                    else:
+                        label = ctk.CTkLabel(input_frame, text="Enter Location " + input + ": ", width=200)
+                        label.pack(side="left")
+                        textbox = ctk.CTkEntry(input_frame)
+                        textbox.pack(side="right")
+                        self.location_values.append(textbox)
+                input_frame = Frame(self.content_frame.form_frame, bg="#000000", pady=20)
+                input_frame.pack()
+                button = ctk.CTkButton(input_frame, text="Submit", command=self.add_description, fg_color="#343638")
+                button.pack(side="left")
+                self.location_message = ctk.CTkLabel(self.content_frame.form_frame, text="")
+                self.location_message.pack(pady=(0, 10))
             case _:
                 self.content_label = Label(self.content_frame, text="Tour Creator", bg="#1f6b2e", font=("Arial", 24), anchor="center")
                 self.content_label.pack(expand=True)
@@ -126,6 +161,15 @@ class Navbar(ctk.CTk):
             text="Lokalizacja została dodana.", text_color="#61d46b"
         )
 
+    def add_description(self):
+        place, opening_time, closing_time, visit_duration, entry_price, country, city, address = (
+            textbox.get().strip() for textbox in self.location_values[:-1]
+        )
+        place_id = place.split()[0]
+        description = self.location_values[-1].get("1.0", "end").strip()
+        print(place_id, opening_time, closing_time, visit_duration, entry_price, country, city, address, description)
+        #Dodawanie opisu do tabeli z opisami, uznajmny, że visit_duration będzie zapisywane w formi 1:30, przed : jest liczba godzin, a po : jest liczba minut Mikołaj
+
     def get_all_locations(self):
         """Return all places as dictionaries containing their ID and name."""
         try:
@@ -137,7 +181,7 @@ class Navbar(ctk.CTk):
             print(f"Nie udało się odczytać lokalizacji: {error}")
             return []
 
-        return [{"Id": place_id, "Name": name} for place_id, name in rows]
+        return [str(place_id)+" "+name for place_id, name in rows]
     
 
 if __name__ == "__main__":
