@@ -281,19 +281,19 @@ class Navbar(ctk.CTk):
         print("XD")
         #funkcja zwraca wszystkie pola z tabeli opisów dla wszystkich rekordów Mikołaj
 
-    def delete_location(self):
-        print("XD")
+    def delete_location(self, id):
+        print(id)
         #usuwa lokalizację o podanym id Mikołaj
 
-    def delete_description(self):
+    def delete_description(self, id):
         print("XD")
         #usuwa opis o podanym id Mikołaj
 
-    def update_location(self):
+    def update_location(self, id):
         print("XD")
         #eytuje lokalizację o podanym id Mikołaj
     
-    def update_description(self):
+    def update_description(self, id):
         print("XD")
         #eytuje opis o podanym id Mikołaj
 
