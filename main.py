@@ -29,7 +29,7 @@ class Navbar(ctk.CTk):
         self.toggle_button.pack(padx=10,pady=10, anchor="w", side="left")
 
         self.nav_buttons = []
-        for text in ["Map", "Add Location", "Add Informations", "Edit Location", "Edit Informations", "Delete Location", "Delete Informations"]:
+        for text in ["Map", "Add Location", "Add Informations", "Edit Location", "Edit Informations"]:
             btn = Button(self.navbar_frame, text=text, bg="#1c8c25", fg="#FFFFFF", font=("Arial, 14"), relief="flat",cursor="hand2", anchor="center", command=lambda t=text: self.navigate_to(t))
             btn.pack(fill="x", pady=5, padx=10, side="left")
             self.nav_buttons.append(btn)
@@ -95,7 +95,7 @@ class Navbar(ctk.CTk):
                     if(input == "Name"):
                         label = ctk.CTkLabel(input_frame, text="Select Location " + input + ": ", width=200)
                         label.pack(side="left")
-                        locations = self.get_all_locations()
+                        locations = self.get_all_locations_id_name()
                         select = ctk.CTkOptionMenu(input_frame, values=locations, fg_color="#343638", button_color="#232527") 
                         select.pack(side="right")
                         self.location_values.append(select)
@@ -260,7 +260,7 @@ class Navbar(ctk.CTk):
             text="Informacje zostały dodane.", text_color="#61d46b"
         )
 
-    def get_all_locations(self):
+    def get_all_locations_id_name(self):
         """Return all places as dictionaries containing their ID and name."""
         try:
             with sqlite3.connect(DATABASE_PATH) as connection:
@@ -272,7 +272,30 @@ class Navbar(ctk.CTk):
             return []
 
         return [str(place_id)+" "+name for place_id, name in rows]
+
+    def get_all_locations_full(self):
+        print("XD")
+        #funkcja zwraca wszystkie pola z tabeli lokalizacji dla wszystkich rekordów Mikołaj
+
+    def get_all_description_full(self):
+        print("XD")
+        #funkcja zwraca wszystkie pola z tabeli opisów dla wszystkich rekordów Mikołaj
+
+    def delete_location(self):
+        print("XD")
+        #usuwa lokalizację o podanym id Mikołaj
+
+    def delete_description(self):
+        print("XD")
+        #usuwa opis o podanym id Mikołaj
+
+    def update_location(self):
+        print("XD")
+        #eytuje lokalizację o podanym id Mikołaj
     
+    def update_description(self):
+        print("XD")
+        #eytuje opis o podanym id Mikołaj
 
 if __name__ == "__main__":
     app = Navbar()
