@@ -274,28 +274,230 @@ class Navbar(ctk.CTk):
         return [str(place_id)+" "+name for place_id, name in rows]
 
     def get_all_locations_full(self):
-        print("XD")
-        #funkcja zwraca wszystkie pola z tabeli lokalizacji dla wszystkich rekordów Mikołaj
+        """Return every place record as a dictionary."""
+        try:
+            with sqlite3.connect(DATABASE_PATH) as connection:
+                connection.row_factory = sqlite3.Row
+                rows = connection.execute(
+                    """
+                    SELECT place_id, name, coordinate_x, coordinate_y
+                    FROM places
+                    ORDER BY place_id
+                    """
+                ).fetchall()
+        except sqlite3.Error as error:
+            print(f"Nie udało się odczytać lokalizacji: {error}")
+            return []
+
+        return [dict(row) for row in rows]
 
     def get_all_description_full(self):
-        print("XD")
-        #funkcja zwraca wszystkie pola z tabeli opisów dla wszystkich rekordów Mikołaj
+        """Return every description record as a dictionary."""
+        try:
+            with sqlite3.connect(DATABASE_PATH) as connection:
+                connection.row_factory = sqlite3.Row
+                rows = connection.execute(
+                    """
+                    SELECT
+                        description_id, place_id, opening_time, closing_time,
+                        visit_duration, entry_price, country, city, address,
+                        description
+                    FROM descriptions
+                    ORDER BY description_id
+                    """
+                ).fetchall()
+        except sqlite3.Error as error:
+            print(f"Nie udało się odczytać opisów: {error}")
+            return []
+
+        return [dict(row) for row in rows]
 
     def delete_location(self, id):
-        print(id)
-        #usuwa lokalizację o podanym id Mikołaj
+        """Delete a place and the descriptions connected to it."""
+        try:
+            place_id = int(id)
+        except (TypeError, ValueError):
+            return False
+
+        if place_id < 1:
+            return False
+
+        try:
+            with sqlite3.connect(DATABASE_PATH) as connection:
+                connection.execute("PRAGMA foreign_keys = ON")
+                location_exists = connection.execute(
+                    "SELECT 1 FROM places WHERE place_id = ?", (place_id,)
+                ).fetchone()
+                if location_exists is None:
+                    return False
+
+                # The schema does not define ON DELETE CASCADE, so remove child
+                # records first to keep the database consistent.
+                connection.execute(
+                    "DELETE FROM descriptions WHERE place_id = ?", (place_id,)
+                )
+                connection.execute(
+                    "DELETE FROM places WHERE place_id = ?", (place_id,)
+                )
+        except sqlite3.Error as error:
+            print(f"Nie udało się usunąć lokalizacji: {error}")
+            return False
+
+        return True
 
     def delete_description(self, id):
-        print("XD")
-        #usuwa opis o podanym id Mikołaj
+        """Delete the description identified by ``id``."""
+        try:
+            description_id = int(id)
+        except (TypeError, ValueError):
+            return False
 
-    def update_location(self, id):
-        print("XD")
-        #eytuje lokalizację o podanym id Mikołaj
-    
-    def update_description(self, id):
-        print("XD")
-        #eytuje opis o podanym id Mikołaj
+        if description_id < 1:
+            return False
+
+        try:
+            with sqlite3.connect(DATABASE_PATH) as connection:
+                cursor = connection.execute(
+                    "DELETE FROM descriptions WHERE description_id = ?",
+                    (description_id,),
+                )
+        except sqlite3.Error as error:
+            print(f"Nie udało się usunąć opisu: {error}")
+            return False
+
+        return cursor.rowcount > 0
+
+    def update_location(self, id, name=None, coordinate_x=None, coordinate_y=None):
+        """Update the supplied fields of a place and return whether it exists."""
+        try:
+            place_id = int(id)
+        except (TypeError, ValueError):
+            return False
+
+        if place_id < 1:
+            return False
+
+        fields = []
+        values = []
+
+        if name is not None:
+            name = str(name).strip()
+            if not name:
+                return False
+            fields.append("name = ?")
+            values.append(name)
+
+        for column, coordinate in (
+            ("coordinate_x", coordinate_x),
+            ("coordinate_y", coordinate_y),
+        ):
+            if coordinate is None:
+                continue
+            try:
+                coordinate = float(coordinate)
+                if not math.isfinite(coordinate):
+                    raise ValueError
+            except (TypeError, ValueError):
+                return False
+            fields.append(f"{column} = ?")
+            values.append(coordinate)
+
+        if not fields:
+            return False
+
+        try:
+            with sqlite3.connect(DATABASE_PATH) as connection:
+                cursor = connection.execute(
+                    f"UPDATE places SET {', '.join(fields)} WHERE place_id = ?",
+                    (*values, place_id),
+                )
+        except sqlite3.Error as error:
+            print(f"Nie udało się zaktualizować lokalizacji: {error}")
+            return False
+
+        return cursor.rowcount > 0
+
+    def update_description(
+        self,
+        id,
+        place_id=None,
+        opening_time=None,
+        closing_time=None,
+        visit_duration=None,
+        entry_price=None,
+        country=None,
+        city=None,
+        address=None,
+        description=None,
+    ):
+        """Update the supplied fields of a description and return whether it exists."""
+        try:
+            description_id = int(id)
+        except (TypeError, ValueError):
+            return False
+
+        if description_id < 1:
+            return False
+
+        fields = []
+        values = []
+
+        if place_id is not None:
+            try:
+                place_id = int(place_id)
+            except (TypeError, ValueError):
+                return False
+            if place_id < 1:
+                return False
+            fields.append("place_id = ?")
+            values.append(place_id)
+
+        for column, value in (
+            ("opening_time", opening_time),
+            ("closing_time", closing_time),
+            ("visit_duration", visit_duration),
+            ("country", country),
+            ("city", city),
+            ("address", address),
+            ("description", description),
+        ):
+            if value is not None:
+                fields.append(f"{column} = ?")
+                values.append(str(value).strip())
+
+        if entry_price is not None:
+            try:
+                entry_price = float(entry_price)
+                if not math.isfinite(entry_price) or entry_price < 0:
+                    raise ValueError
+            except (TypeError, ValueError):
+                return False
+            fields.append("entry_price = ?")
+            values.append(entry_price)
+
+        if not fields:
+            return False
+
+        try:
+            with sqlite3.connect(DATABASE_PATH) as connection:
+                connection.execute("PRAGMA foreign_keys = ON")
+                if place_id is not None:
+                    place_exists = connection.execute(
+                        "SELECT 1 FROM places WHERE place_id = ?", (place_id,)
+                    ).fetchone()
+                    if place_exists is None:
+                        return False
+
+                cursor = connection.execute(
+                    f"UPDATE descriptions SET {', '.join(fields)} "
+                    "WHERE description_id = ?",
+                    (*values, description_id),
+                )
+        except sqlite3.Error as error:
+            print(f"Nie udało się zaktualizować opisu: {error}")
+            return False
+
+        return cursor.rowcount > 0
 
 if __name__ == "__main__":
     app = Navbar()
