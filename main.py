@@ -207,7 +207,7 @@ class Navbar(ctk.CTk):
                     for j in range(len(data[i])):
                         label = ctk.CTkLabel(self.content_frame.table_frame, text=data[i][j], font=("Arial", 12))
                         label.grid(row=i+1, column=j, padx=5, pady=5)
-                    update_button = ctk.CTkButton(self.content_frame.table_frame, text="Edit",  command=lambda x="EI", y=data[i][1]: self.navigate_to(x, y), fg_color="#198926")
+                    update_button = ctk.CTkButton(self.content_frame.table_frame, text="Edit",  command=lambda x="EI", y=data[i][0]: self.navigate_to(x, y), fg_color="#198926")
                     update_button.grid(row=i+1, column=j+1, padx=5, pady=5)
                     delete_button = ctk.CTkButton(self.content_frame.table_frame, text="Delete",  command=lambda x=data[i][1]: self.delete_description(x), fg_color="#C30D0D")
                     delete_button.grid(row=i+1, column=j+2, padx=5, pady=5)
@@ -221,6 +221,7 @@ class Navbar(ctk.CTk):
                 for i in range(len(descriptions)):
                     if(descriptions[i]["description_id"] == id):
                         locations = self.get_all_locations_id_name()
+                        print(locations)
                         for location in locations:
                             if location.split()[0].strip() == str(descriptions[i]["place_id"]):
                                 description[0] = location
