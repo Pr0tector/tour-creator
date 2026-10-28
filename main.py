@@ -52,9 +52,14 @@ class Navbar(ctk.CTk):
             self.navbar_expand = True
 
     form_active = False
-    def navigate_to(self, page_name):
+    table_active = False
+    def navigate_to(self, page_name, id = -1):
         if self.form_active: 
             self.content_frame.form_frame.pack_forget()
+            self.form_active = False
+        if self.table_active: 
+            self.content_frame.table_frame.pack_forget()
+            self.table_active = False
         match page_name:
             case "Add Location":
                 self.content_label.pack_forget()
@@ -117,10 +122,157 @@ class Navbar(ctk.CTk):
                 button.pack(side="left")
                 self.location_message = ctk.CTkLabel(self.content_frame.form_frame, text="")
                 self.location_message.pack(pady=(0, 10))
+            case "Edit Location":
+                self.content_label.pack_forget()
+                self.content_frame.table_frame = ctk.CTkScrollableFrame(
+                                    self.content_frame,
+                                    fg_color="#000000",
+                                )
+                self.content_frame.table_frame.pack(
+                                    fill="both", expand=True, padx=20, pady=20
+                                )
+                self.table_active = True
+                locations = self.get_all_locations_full()
+                headers = ["ID", "Location Name", "X-Coordinate", "Y-Coordinate", "Edit", "Delete"]
+                for i in range(len(headers)):
+                    label = ctk.CTkLabel(self.content_frame.table_frame, text=headers[i], font=("Arial", 16, "bold"))
+                    label.grid(row=0, column=i, padx=5, pady=5)
+                for i in range(len(locations)):
+                    label = ctk.CTkLabel(self.content_frame.table_frame, text=locations[i]["place_id"], font=("Arial", 12))
+                    label.grid(row=i+1, column=0, padx=5, pady=5)
+                    label = ctk.CTkLabel(self.content_frame.table_frame, text=locations[i]["name"], font=("Arial", 12))
+                    label.grid(row=i+1, column=1, padx=5, pady=5)
+                    label = ctk.CTkLabel(self.content_frame.table_frame, text=locations[i]["coordinate_x"], font=("Arial", 12))
+                    label.grid(row=i+1, column=2, padx=5, pady=5)
+                    label = ctk.CTkLabel(self.content_frame.table_frame, text=locations[i]["coordinate_y"], font=("Arial", 12))
+                    label.grid(row=i+1, column=3, padx=5, pady=5)
+                    update_button = ctk.CTkButton(self.content_frame.table_frame, text="Edit",  command=lambda x="EL", y=locations[i]["place_id"]: self.navigate_to(x, y), fg_color="#198926")
+                    update_button.grid(row=i+1, column=4, padx=5, pady=5)
+                    delete_button = ctk.CTkButton(self.content_frame.table_frame, text="Delete",  command=lambda x=locations[i]["place_id"]: self.delete_location(x), fg_color="#C30D0D")
+                    delete_button.grid(row=i+1, column=5, padx=5, pady=5)
+            case "EL":
+                self.content_label.pack_forget()
+                self.content_frame.form_frame = Frame(self.content_frame, bg="#000000", height=600, width=600, pady=20, padx=50)
+                self.content_frame.form_frame.pack()
+                self.form_active = True
+                locations = self.get_all_locations_full()
+                location = ["NULL","NULL","NULL"]
+                for i in range(len(locations)):
+                    if(locations[i]["place_id"] == id):
+                        location[0] = locations[i]["name"]
+                        location[1] = locations[i]["coordinate_x"]
+                        location[2] = locations[i]["coordinate_y"]
+                self.location_inputs = ["Name", "X-Coordinate", "Y-Coordinate"]
+                self.location_values = []
+                for i, input in enumerate(self.location_inputs):
+                    input_frame = Frame(self.content_frame.form_frame, bg="#000000", pady=20)
+                    input_frame.pack()
+                    label = ctk.CTkLabel(input_frame, text="Enter Location " + input + ": ", width=200)
+                    label.pack(side="left")
+                    textbox = ctk.CTkEntry(input_frame)
+                    textbox.insert(0, location[i])
+                    textbox.pack(side="right")
+                    self.location_values.append(textbox)
+                input_frame = Frame(self.content_frame.form_frame, bg="#000000", pady=20)
+                input_frame.pack()
+                button = ctk.CTkButton(input_frame, text="Update", command=lambda x=id: self.update_location(x), fg_color="#343638")
+                button.pack(side="left")
+                self.location_message = ctk.CTkLabel(self.content_frame.form_frame, text="")
+                self.location_message.pack(pady=(0, 10))
+            case "Edit Informations":
+                self.content_label.pack_forget()
+                self.content_frame.table_frame = ctk.CTkScrollableFrame(
+                                    self.content_frame,
+                                    fg_color="#000000",
+                                )
+                self.content_frame.table_frame.pack(
+                                    fill="both", expand=True, padx=20, pady=20
+                                )
+                self.table_active = True
+                descriptions = self.get_all_description_full()
+                locations = self.get_all_locations_full()
+                data = []
+                for i in range(len(descriptions)):
+                    record = [descriptions[i]["description_id"],descriptions[i]["place_id"],"NULL",descriptions[i]["opening_time"],descriptions[i]["closing_time"],descriptions[i]["visit_duration"],descriptions[i]["entry_price"],descriptions[i]["country"],descriptions[i]["city"],descriptions[i]["address"]," ".join(descriptions[i]["description"].split()[:5])]
+                    for j in range(len(locations)):
+                        if(descriptions[i]["place_id"] == locations[j]["place_id"]):
+                            record[2] = locations[j]["name"]
+                    data.append(record)
+
+                headers = ["ID", "Location ID", "Location Name", "Opening Time", "Closing Time", "Visit Duration", "Entry Price", "Country", "City", "Address", "Description", "Edit", "Delete"]
+                for i in range(len(headers)):
+                    label = ctk.CTkLabel(self.content_frame.table_frame, text=headers[i], font=("Arial", 16, "bold"))
+                    label.grid(row=0, column=i, padx=5, pady=5)
+                for i in range(len(data)):
+                    for j in range(len(data[i])):
+                        label = ctk.CTkLabel(self.content_frame.table_frame, text=data[i][j], font=("Arial", 12))
+                        label.grid(row=i+1, column=j, padx=5, pady=5)
+                    update_button = ctk.CTkButton(self.content_frame.table_frame, text="Edit",  command=lambda x="EI", y=data[i][1]: self.navigate_to(x, y), fg_color="#198926")
+                    update_button.grid(row=i+1, column=j+1, padx=5, pady=5)
+                    delete_button = ctk.CTkButton(self.content_frame.table_frame, text="Delete",  command=lambda x=data[i][1]: self.delete_description(x), fg_color="#C30D0D")
+                    delete_button.grid(row=i+1, column=j+2, padx=5, pady=5)
+            case "EI":
+                self.content_label.pack_forget()
+                self.content_frame.form_frame = Frame(self.content_frame, bg="#000000", height=600, width=600, pady=20, padx=50)
+                self.content_frame.form_frame.pack()
+                self.form_active = True
+                descriptions = self.get_all_description_full()
+                description = ["NULL","NULL","NULL","NULL","NULL","NULL","NULL","NULL","NULL"]
+                for i in range(len(descriptions)):
+                    if(descriptions[i]["description_id"] == id):
+                        locations = self.get_all_locations_id_name()
+                        for location in locations:
+                            if location.split()[0].strip() == str(descriptions[i]["place_id"]):
+                                description[0] = location
+                        description[1] = descriptions[i]["opening_time"]
+                        description[2] = descriptions[i]["closing_time"]
+                        description[3] = descriptions[i]["visit_duration"]
+                        description[4] = descriptions[i]["entry_price"]
+                        description[5] = descriptions[i]["country"]  
+                        description[6] = descriptions[i]["city"]
+                        description[7] = descriptions[i]["address"]
+                        description[8] = descriptions[i]["description"]                     
+                self.location_message = ctk.CTkLabel(self.content_frame.form_frame, text="")
+                self.location_message.pack(pady=(0, 10))
+                self.form_active = True
+                self.location_inputs = ["Name", "Opening Time", "Closing Time", "Visit Duration", "Entry Price", "Country", "City", "Address", "Description"]
+                self.location_values = []
+                for i,input in enumerate(self.location_inputs):
+                    input_frame = Frame(self.content_frame.form_frame, bg="#000000", pady=20)
+                    input_frame.pack()
+                    if(input == "Name"):
+                        label = ctk.CTkLabel(input_frame, text="Select Location " + input + ": ", width=200)
+                        label.pack(side="left")
+                        locations = self.get_all_locations_id_name()
+                        select = ctk.CTkOptionMenu(input_frame, values=locations, fg_color="#343638", button_color="#232527") 
+                        select.set(description[i])
+                        select.pack(side="right")
+                        self.location_values.append(select)
+                    elif(input == "Description"):
+                        label = ctk.CTkLabel(input_frame, text="Enter Location " + input + ": ", width=200)
+                        label.pack(side="left")
+                        textbox = ctk.CTkTextbox(input_frame)
+                        textbox.insert("1.0", description[i])
+                        textbox.pack(side="right")
+                        self.location_values.append(textbox)
+                    else:
+                        label = ctk.CTkLabel(input_frame, text="Enter Location " + input + ": ", width=200)
+                        label.pack(side="left")
+                        textbox = ctk.CTkEntry(input_frame)
+                        textbox.insert(0, description[i])
+                        textbox.pack(side="right")
+                        self.location_values.append(textbox)
+                input_frame = Frame(self.content_frame.form_frame, bg="#000000", pady=20)
+                input_frame.pack()
+                button = ctk.CTkButton(input_frame, text="Update", command=lambda x=id: self.update_description(x), fg_color="#343638")
+                button.pack(side="left")
+                self.location_message = ctk.CTkLabel(self.content_frame.form_frame, text="")
+                self.location_message.pack(pady=(0, 10))
             case _:
                 self.content_label = Label(self.content_frame, text="Tour Creator", bg="#1f6b2e", font=("Arial", 24), anchor="center")
                 self.content_label.pack(expand=True)
                 print("XD")
+            
 
     def add_location(self):
         """Validate form fields and save a new place to the SQLite database."""
@@ -317,10 +469,10 @@ class Navbar(ctk.CTk):
         try:
             place_id = int(id)
         except (TypeError, ValueError):
-            return False
+            return False, self.navigate_to("Edit Location")
 
         if place_id < 1:
-            return False
+            return False, self.navigate_to("Edit Location")
 
         try:
             with sqlite3.connect(DATABASE_PATH) as connection:
@@ -329,7 +481,7 @@ class Navbar(ctk.CTk):
                     "SELECT 1 FROM places WHERE place_id = ?", (place_id,)
                 ).fetchone()
                 if location_exists is None:
-                    return False
+                    return False, self.navigate_to("Edit Location")
 
                 # The schema does not define ON DELETE CASCADE, so remove child
                 # records first to keep the database consistent.
@@ -341,19 +493,19 @@ class Navbar(ctk.CTk):
                 )
         except sqlite3.Error as error:
             print(f"Nie udało się usunąć lokalizacji: {error}")
-            return False
+            return False, self.navigate_to("Edit Location")
 
-        return True
+        return True, self.navigate_to("Edit Location")
 
     def delete_description(self, id):
         """Delete the description identified by ``id``."""
         try:
             description_id = int(id)
         except (TypeError, ValueError):
-            return False
+            return False, self.navigate_to("Edit Informations")
 
         if description_id < 1:
-            return False
+            return False, self.navigate_to("Edit Informations")
 
         try:
             with sqlite3.connect(DATABASE_PATH) as connection:
@@ -363,19 +515,22 @@ class Navbar(ctk.CTk):
                 )
         except sqlite3.Error as error:
             print(f"Nie udało się usunąć opisu: {error}")
-            return False
+            return False, self.navigate_to("Edit Informations")
 
-        return cursor.rowcount > 0
+        return cursor.rowcount > 0, self.navigate_to("Edit Informations")
 
-    def update_location(self, id, name=None, coordinate_x=None, coordinate_y=None):
+    def update_location(self, id):
         """Update the supplied fields of a place and return whether it exists."""
         try:
             place_id = int(id)
         except (TypeError, ValueError):
-            return False
+            return False, self.navigate_to("Edit Location")
+        name, coordinate_x, coordinate_y = (
+                    textbox.get().strip() for textbox in self.location_values
+                )
 
         if place_id < 1:
-            return False
+            return False, self.navigate_to("Edit Location")
 
         fields = []
         values = []
@@ -403,7 +558,7 @@ class Navbar(ctk.CTk):
             values.append(coordinate)
 
         if not fields:
-            return False
+            return False, self.navigate_to("Edit Location")
 
         try:
             with sqlite3.connect(DATABASE_PATH) as connection:
@@ -413,23 +568,11 @@ class Navbar(ctk.CTk):
                 )
         except sqlite3.Error as error:
             print(f"Nie udało się zaktualizować lokalizacji: {error}")
-            return False
+            return False, self.navigate_to("Edit Location")
 
-        return cursor.rowcount > 0
+        return cursor.rowcount > 0, self.navigate_to("Edit Location")
 
-    def update_description(
-        self,
-        id,
-        place_id=None,
-        opening_time=None,
-        closing_time=None,
-        visit_duration=None,
-        entry_price=None,
-        country=None,
-        city=None,
-        address=None,
-        description=None,
-    ):
+    def update_description(self, id):
         """Update the supplied fields of a description and return whether it exists."""
         try:
             description_id = int(id)
@@ -441,6 +584,26 @@ class Navbar(ctk.CTk):
 
         fields = []
         values = []
+
+        (
+            place,
+            opening_time,
+            closing_time,
+            visit_duration,
+            entry_price,
+            country,
+            city,
+            address,
+        ) = (textbox.get().strip() for textbox in self.location_values[:-1])
+        description = self.location_values[-1].get("1.0", "end").strip()
+
+        try:
+            place_id = int(place.split(maxsplit=1)[0])
+        except (IndexError, ValueError):
+            self.location_message.configure(
+                text="Wybierz poprawną lokalizację.", text_color="#ff6b6b"
+            )
+            return
 
         if place_id is not None:
             try:
@@ -486,7 +649,7 @@ class Navbar(ctk.CTk):
                         "SELECT 1 FROM places WHERE place_id = ?", (place_id,)
                     ).fetchone()
                     if place_exists is None:
-                        return False
+                        return False, self.navigate_to("Edit Informations")
 
                 cursor = connection.execute(
                     f"UPDATE descriptions SET {', '.join(fields)} "
@@ -497,7 +660,7 @@ class Navbar(ctk.CTk):
             print(f"Nie udało się zaktualizować opisu: {error}")
             return False
 
-        return cursor.rowcount > 0
+        return cursor.rowcount > 0, self.navigate_to("Edit Informations")
 
 if __name__ == "__main__":
     app = Navbar()
