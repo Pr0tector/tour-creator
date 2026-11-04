@@ -1,9 +1,10 @@
-import customtkinter as ctk
-from tkinter import *
 import math
-import sqlite3
 from pathlib import Path
+from tkinter import *
 
+import customtkinter as ctk
+import sqlite3
+import tkintermapview
 
 DATABASE_PATH = Path(__file__).with_name("database.db")
 
@@ -29,7 +30,7 @@ class Navbar(ctk.CTk):
         self.toggle_button.pack(padx=10,pady=10, anchor="w", side="left")
 
         self.nav_buttons = []
-        for text in ["Map", "Add Location", "Add Informations", "Edit Location", "Edit Informations"]:
+        for text in ["Map", "Add Location", "Add Information", "Edit Location", "Edit Information"]:
             btn = Button(self.navbar_frame, text=text, bg="#1c8c25", fg="#FFFFFF", font=("Arial, 14"), relief="flat",cursor="hand2", anchor="center", command=lambda t=text: self.navigate_to(t))
             btn.pack(fill="x", pady=5, padx=10, side="left")
             self.nav_buttons.append(btn)
@@ -55,14 +56,14 @@ class Navbar(ctk.CTk):
     table_active = False
     map_active = False
     def navigate_to(self, page_name, id = -1):
-        if self.form_active: 
+        if self.form_active:
             self.content_frame.form_frame.pack_forget()
             self.form_active = False
-        if self.table_active: 
+        if self.table_active:
             self.content_frame.table_frame.pack_forget()
             self.table_active = False
-        if self.table_active: 
-            self.content_frame.map_active.pack_forget()
+        if self.map_active:
+            self.content_frame.map_frame.pack_forget()
             self.map_active = False
         match page_name:
             case "Add Location":
@@ -86,7 +87,7 @@ class Navbar(ctk.CTk):
                 button.pack(side="left")
                 self.location_message = ctk.CTkLabel(self.content_frame.form_frame, text="")
                 self.location_message.pack(pady=(0, 10))
-            case "Add Informations":
+            case "Add Information":
                 self.content_label.pack_forget()
                 self.content_frame.form_frame = ctk.CTkScrollableFrame(
                     self.content_frame,
@@ -183,7 +184,7 @@ class Navbar(ctk.CTk):
                 button.pack(side="left")
                 self.location_message = ctk.CTkLabel(self.content_frame.form_frame, text="")
                 self.location_message.pack(pady=(0, 10))
-            case "Edit Informations":
+            case "Edit Information":
                 self.content_label.pack_forget()
                 self.content_frame.table_frame = ctk.CTkScrollableFrame(
                                     self.content_frame,
@@ -275,7 +276,7 @@ class Navbar(ctk.CTk):
                 self.location_message.pack(pady=(0, 10))
             case "Map":
                 self.content_label.pack_forget()
-                self.content_frame.map_frame = Frame(self.content_frame, bg="#000000", height=600, width=600, pady=20, padx=50)
+                self.content_frame.map_frame = Frame(self.content_frame, bg="#000000", height=600, width=600)
                 self.content_frame.map_frame.pack()
                 self.map_active = True
                 self.import_map()
@@ -283,7 +284,6 @@ class Navbar(ctk.CTk):
                 self.content_label = Label(self.content_frame, text="Tour Creator", bg="#1f6b2e", font=("Arial", 24), anchor="center")
                 self.content_label.pack(expand=True)
                 print("XD")
-            
 
     def add_location(self):
         """Validate form fields and save a new place to the SQLite database."""
@@ -513,10 +513,10 @@ class Navbar(ctk.CTk):
         try:
             description_id = int(id)
         except (TypeError, ValueError):
-            return False, self.navigate_to("Edit Informations")
+            return False, self.navigate_to("Edit Information")
 
         if description_id < 1:
-            return False, self.navigate_to("Edit Informations")
+            return False, self.navigate_to("Edit Information")
 
         try:
             with sqlite3.connect(DATABASE_PATH) as connection:
@@ -526,9 +526,9 @@ class Navbar(ctk.CTk):
                 )
         except sqlite3.Error as error:
             print(f"Nie udało się usunąć opisu: {error}")
-            return False, self.navigate_to("Edit Informations")
+            return False, self.navigate_to("Edit Information")
 
-        return cursor.rowcount > 0, self.navigate_to("Edit Informations")
+        return cursor.rowcount > 0, self.navigate_to("Edit Information")
 
     def update_location(self, id):
         """Update the supplied fields of a place and return whether it exists."""
@@ -660,7 +660,7 @@ class Navbar(ctk.CTk):
                         "SELECT 1 FROM places WHERE place_id = ?", (place_id,)
                     ).fetchone()
                     if place_exists is None:
-                        return False, self.navigate_to("Edit Informations")
+                        return False, self.navigate_to("Edit Information")
 
                 cursor = connection.execute(
                     f"UPDATE descriptions SET {', '.join(fields)} "
@@ -671,11 +671,20 @@ class Navbar(ctk.CTk):
             print(f"Nie udało się zaktualizować opisu: {error}")
             return False
 
-        return cursor.rowcount > 0, self.navigate_to("Edit Informations")
+        return cursor.rowcount > 0, self.navigate_to("Edit Information")
 
     def import_map(self):
-        print("XD")
-        #Wstaw importowqanie mapy Kuba
+        if not hasattr(self, "map_widget"):
+            self.map_widget = tkintermapview.TkinterMapView(self.content_frame.map_frame, width=600, height=600)
+
+            # Use Google Maps tile server
+            self.map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=m&hl=pl&x={x}&y={y}&z={z}&s=Ga", max_zoom=22)
+
+            # Put the view in the center of Poland
+            self.map_widget.set_position(52.0, 19.0)
+            self.map_widget.set_zoom(6)
+
+        self.map_widget.pack(fill="both", expand=True)
 
 if __name__ == "__main__":
     app = Navbar()
