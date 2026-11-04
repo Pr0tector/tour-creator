@@ -53,6 +53,7 @@ class Navbar(ctk.CTk):
 
     form_active = False
     table_active = False
+    map_active = False
     def navigate_to(self, page_name, id = -1):
         if self.form_active: 
             self.content_frame.form_frame.pack_forget()
@@ -60,6 +61,9 @@ class Navbar(ctk.CTk):
         if self.table_active: 
             self.content_frame.table_frame.pack_forget()
             self.table_active = False
+        if self.table_active: 
+            self.content_frame.map_active.pack_forget()
+            self.map_active = False
         match page_name:
             case "Add Location":
                 self.content_label.pack_forget()
@@ -269,6 +273,12 @@ class Navbar(ctk.CTk):
                 button.pack(side="left")
                 self.location_message = ctk.CTkLabel(self.content_frame.form_frame, text="")
                 self.location_message.pack(pady=(0, 10))
+            case "Map":
+                self.content_label.pack_forget()
+                self.content_frame.map_frame = Frame(self.content_frame, bg="#000000", height=600, width=600, pady=20, padx=50)
+                self.content_frame.map_frame.pack()
+                self.map_active = True
+                self.import_map()
             case _:
                 self.content_label = Label(self.content_frame, text="Tour Creator", bg="#1f6b2e", font=("Arial", 24), anchor="center")
                 self.content_label.pack(expand=True)
@@ -662,6 +672,10 @@ class Navbar(ctk.CTk):
             return False
 
         return cursor.rowcount > 0, self.navigate_to("Edit Informations")
+
+    def import_map(self):
+        print("XD")
+        #Wstaw importowqanie mapy Kuba
 
 if __name__ == "__main__":
     app = Navbar()
