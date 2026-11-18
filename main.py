@@ -683,8 +683,17 @@ class Navbar(ctk.CTk):
             # Put the view in the center of Poland
             self.map_widget.set_position(52.0, 19.0)
             self.map_widget.set_zoom(6)
+            self.map_widget.pack(fill="both", expand=True)
 
-        self.map_widget.pack(fill="both", expand=True)
+        self.sync_map_markers()
+
+    def sync_map_markers(self):
+        self.map_widget.delete_all_marker()
+
+        for place in self.get_all_locations_full():
+            x, y = place["coordinate_x"], place["coordinate_y"]
+            if x is not None and y is not None:
+                self.map_widget.set_marker(x, y, place["name"])
 
 if __name__ == "__main__":
     app = Navbar()
