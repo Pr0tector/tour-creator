@@ -57,10 +57,10 @@ class Navbar(ctk.CTk):
     map_active = False
     def navigate_to(self, page_name, id = -1):
         if self.form_active:
-            self.content_frame.form_frame.pack_forget()
+            self.content_frame.form_frame.destroy()
             self.form_active = False
         if self.table_active:
-            self.content_frame.table_frame.pack_forget()
+            self.content_frame.table_frame.destroy()
             self.table_active = False
         if self.map_active:
             self.content_frame.map_frame.pack_forget()
@@ -276,12 +276,12 @@ class Navbar(ctk.CTk):
                 self.location_message.pack(pady=(0, 10))
             case "Map":
                 self.content_label.pack_forget()
-                self.content_frame.map_frame = Frame(self.content_frame, bg="#000000", height=600, width=600)
+                if not hasattr(self.content_frame, "map_frame"):
+                    self.content_frame.map_frame = Frame(self.content_frame, bg="#000000", height=600, width=600)
                 self.content_frame.map_frame.pack()
                 self.map_active = True
                 self.import_map()
             case _:
-                self.content_label = Label(self.content_frame, text="Tour Creator", bg="#1f6b2e", font=("Arial", 24), anchor="center")
                 self.content_label.pack(expand=True)
                 print("XD")
 
