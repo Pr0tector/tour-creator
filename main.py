@@ -279,8 +279,11 @@ class Navbar(ctk.CTk):
                 if not hasattr(self.content_frame, "map_frame"):
                     self.content_frame.map_frame = Frame(self.content_frame, bg="#000000", height=600, width=600)
                 self.content_frame.map_frame.pack()
+                self.button_create_tour = ctk.CTkButton(self.content_frame.map_frame, text="Create Tour", command=lambda : self.create_tour(), fg_color="#343638")
+                self.button_create_tour.pack(side="right", anchor="ne")
                 self.map_active = True
                 self.import_map()
+                
             case _:
                 self.content_label.pack(expand=True)
                 print("XD")
@@ -694,6 +697,42 @@ class Navbar(ctk.CTk):
             x, y = place["coordinate_x"], place["coordinate_y"]
             if x is not None and y is not None:
                 self.map_widget.set_marker(x, y, place["name"])
+
+    def create_tour(self):
+        self.button_create_tour.pack_forget()
+        self.content_frame.map_frame.tour_creator_frame = ctk.CTkScrollableFrame(
+                    self.content_frame.map_frame,
+                    fg_color="#27571A",
+                )
+        self.content_frame.map_frame.tour_creator_frame.pack(side="right", anchor="ne")
+        self.locations_amount = 0
+        self.locations_in_tour = []
+        button = ctk.CTkButton(self.content_frame.map_frame.tour_creator_frame, text="Add Location", command=lambda : self.add_location(), fg_color="#343638")
+        button.pack(side="top")
+        
+    def add_location(self):
+        #dodać sposób pobierania nazwy miejsca oraz czasów otwaracia, zamknięcia i długości trwania wizyty Kuba
+        name = "XD"
+        open_time = 10
+        close_tmie = 20
+        visit_time = 1
+        visit_begining_time = 11
+        location_frame = Frame(self.content_frame.map_frame.tour_creator_frame, bg="#000000")
+        location_frame.pack()
+        self.locations_in_tour.append(location_frame)
+        text = "Location name: " + name
+        label = ctk.CTkLabel(location_frame, text=text, font=("Arial", 12))
+        label.grid(row=0, column=0, padx=5, pady=5)
+        text = "Visit span: " + str(visit_begining_time) + ":00-" + str(visit_begining_time +visit_time) + ":00" 
+        label = ctk.CTkLabel(location_frame, text=text, font=("Arial", 12))
+        label.grid(row=1, column=0, padx=5, pady=5)
+        id = self.locations_amount
+        button = ctk.CTkButton(location_frame, text="Remove Location", command=lambda id=id: self.remove_location(id), fg_color="#343638")
+        button.grid(row=2, column=0, padx=5, pady=5)
+        self.locations_amount += 1
+
+    def remove_location(self, id):
+        self.locations_in_tour[id].pack_forget()
 
 if __name__ == "__main__":
     app = Navbar()
