@@ -8,6 +8,14 @@ import tkintermapview
 
 DATABASE_PATH = Path(__file__).with_name("database.db")
 
+DEFAULT_MARKER_CIRCLE_COLOR = "#9B261E"
+DEFAULT_MARKER_OUTSIDE_COLOR = "#C5542D"
+DEFAULT_MARKER_TEXT_COLOR = "#9B261E"
+
+SELECTED_MARKER_CIRCLE_COLOR = "#1A5FB4"
+SELECTED_MARKER_OUTSIDE_COLOR = "#3584E4"
+SELECTED_MARKER_TEXT_COLOR = "#1A5FB4"
+
 class Navbar(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -214,7 +222,7 @@ class Navbar(ctk.CTk):
                         label.grid(row=i+1, column=j, padx=5, pady=5)
                     update_button = ctk.CTkButton(self.content_frame.table_frame, text="Edit",  command=lambda x="EI", y=data[i][0]: self.navigate_to(x, y), fg_color="#198926")
                     update_button.grid(row=i+1, column=j+1, padx=5, pady=5)
-                    delete_button = ctk.CTkButton(self.content_frame.table_frame, text="Delete",  command=lambda x=data[i][1]: self.delete_description(x), fg_color="#C30D0D")
+                    delete_button = ctk.CTkButton(self.content_frame.table_frame, text="Delete",  command=lambda x=data[i][0]: self.delete_description(x), fg_color="#C30D0D")
                     delete_button.grid(row=i+1, column=j+2, padx=5, pady=5)
             case "EI":
                 self.content_label.pack_forget()
@@ -278,12 +286,12 @@ class Navbar(ctk.CTk):
                 self.content_label.pack_forget()
                 if not hasattr(self.content_frame, "map_frame"):
                     self.content_frame.map_frame = Frame(self.content_frame, bg="#000000", height=600, width=600)
-                self.content_frame.map_frame.pack()
-                self.button_create_tour = ctk.CTkButton(self.content_frame.map_frame, text="Create Tour", command=lambda : self.create_tour(), fg_color="#343638")
-                self.button_create_tour.pack(side="right", anchor="ne")
+                    self.button_create_tour = ctk.CTkButton(self.content_frame.map_frame, text="Create Tour", command=self.create_tour, fg_color="#343638")
+                    self.button_create_tour.pack(side="right", anchor="ne")
+                self.content_frame.map_frame.pack(fill="both", expand=True, padx=20, pady=20)
                 self.map_active = True
                 self.import_map()
-                
+
             case _:
                 self.content_label.pack(expand=True)
                 print("XD")
@@ -477,6 +485,30 @@ class Navbar(ctk.CTk):
             return []
 
         return [dict(row) for row in rows]
+
+    def get_place_tour_info(self, place_id):
+        try:
+            with sqlite3.connect(DATABASE_PATH) as connection:
+                connection.row_factory = sqlite3.Row
+                row = connection.execute(
+                    """
+                    SELECT
+                        p.name,
+                        d.opening_time,
+                        d.closing_time,
+                        d.visit_duration
+                    FROM places p
+                    LEFT JOIN descriptions d ON p.place_id = d.place_id
+                    WHERE p.place_id = ?
+                    LIMIT 1
+                    """,
+                    (place_id,)
+                ).fetchone()
+        except sqlite3.Error as error:
+            print(f"Nie udało się pobrać danych miejsca: {error}")
+            return None
+
+        return dict(row) if row else None
 
     def delete_location(self, id):
         """Delete a place and the descriptions connected to it."""
@@ -686,9 +718,21 @@ class Navbar(ctk.CTk):
             # Put the view in the center of Poland
             self.map_widget.set_position(52.0, 19.0)
             self.map_widget.set_zoom(6)
-            self.map_widget.pack(fill="both", expand=True)
+            self.map_widget.pack(side="left", fill="both", expand=True)
 
         self.sync_map_markers()
+
+    def create_place_marker(self, place_id, name, x, y, selected=False):
+        marker_circle_color = SELECTED_MARKER_CIRCLE_COLOR if selected else DEFAULT_MARKER_CIRCLE_COLOR
+        marker_outside_color = SELECTED_MARKER_OUTSIDE_COLOR if selected else DEFAULT_MARKER_OUTSIDE_COLOR
+        marker_text_color = SELECTED_MARKER_TEXT_COLOR if selected else DEFAULT_MARKER_TEXT_COLOR
+        return self.map_widget.set_marker(x, y, text=name, data=place_id, marker_color_circle=marker_circle_color, marker_color_outside=marker_outside_color, text_color=marker_text_color, command=self.select_marker)
+
+    def update_add_tour_button_state(self):
+        button = getattr(self, "add_tour_location_button", None)
+        if button is not None and button.winfo_exists():
+            state = "normal" if getattr(self, "selected_place_id", None) is not None else "disabled"
+            button.configure(state=state)
 
     def sync_map_markers(self):
         self.map_widget.delete_all_marker()
@@ -696,43 +740,73 @@ class Navbar(ctk.CTk):
         for place in self.get_all_locations_full():
             x, y = place["coordinate_x"], place["coordinate_y"]
             if x is not None and y is not None:
-                self.map_widget.set_marker(x, y, place["name"])
+                self.create_place_marker(place["place_id"], place["name"], x, y)
+
+        self.update_add_tour_button_state()
+
+    def select_marker(self, marker):
+        if getattr(self, "selected_marker", None) is not None:
+            old_marker = self.selected_marker
+
+            x, y = old_marker.position
+            place_id, name = old_marker.data, old_marker.text
+
+            old_marker.delete()
+            self.create_place_marker(place_id, name, x, y)
+
+        x, y = marker.position
+        place_id, name = marker.data, marker.text
+
+        marker.delete()
+        new_marker = self.create_place_marker(place_id, name, x, y, True)
+
+        self.selected_marker = new_marker
+        self.selected_place_id = place_id
+
+        self.update_add_tour_button_state()
 
     def create_tour(self):
         self.button_create_tour.pack_forget()
-        self.content_frame.map_frame.tour_creator_frame = ctk.CTkScrollableFrame(
-                    self.content_frame.map_frame,
-                    fg_color="#27571A",
-                )
-        self.content_frame.map_frame.tour_creator_frame.pack(side="right", anchor="ne")
-        self.locations_amount = 0
-        self.locations_in_tour = []
-        button = ctk.CTkButton(self.content_frame.map_frame.tour_creator_frame, text="Add Location", command=lambda : self.add_location(), fg_color="#343638")
-        button.pack(side="top")
-        
-    def add_location(self):
-        #dodać sposób pobierania nazwy miejsca oraz czasów otwaracia, zamknięcia i długości trwania wizyty Kuba
-        name = "XD"
-        open_time = 10
-        close_tmie = 20
-        visit_time = 1
-        visit_begining_time = 11
-        location_frame = Frame(self.content_frame.map_frame.tour_creator_frame, bg="#000000")
-        location_frame.pack()
-        self.locations_in_tour.append(location_frame)
-        text = "Location name: " + name
-        label = ctk.CTkLabel(location_frame, text=text, font=("Arial", 12))
-        label.grid(row=0, column=0, padx=5, pady=5)
-        text = "Visit span: " + str(visit_begining_time) + ":00-" + str(visit_begining_time +visit_time) + ":00" 
-        label = ctk.CTkLabel(location_frame, text=text, font=("Arial", 12))
-        label.grid(row=1, column=0, padx=5, pady=5)
-        id = self.locations_amount
-        button = ctk.CTkButton(location_frame, text="Remove Location", command=lambda id=id: self.remove_location(id), fg_color="#343638")
-        button.grid(row=2, column=0, padx=5, pady=5)
-        self.locations_amount += 1
+        self.content_frame.map_frame.tour_creator_frame = ctk.CTkScrollableFrame(self.content_frame.map_frame, fg_color="#27571A")
+        self.content_frame.map_frame.tour_creator_frame.pack(side="right", fill="y")
+        self.tour_locations = []
 
-    def remove_location(self, id):
-        self.locations_in_tour[id].pack_forget()
+        add_tour_location_button_state = "normal" if getattr(self, "selected_place_id", None) is not None else "disabled"
+        self.add_tour_location_button = ctk.CTkButton(self.content_frame.map_frame.tour_creator_frame, text="Add Location", command=self.add_tour_location, fg_color="#343638", state=add_tour_location_button_state)
+        self.add_tour_location_button.pack(side="top")
+
+    def add_tour_location(self):
+        if getattr(self, "selected_place_id", None) is None:
+            return
+
+        info = self.get_place_tour_info(self.selected_place_id)
+        if info is None:
+            return
+    
+        name = info["name"]
+        opening_time, closing_time = info["opening_time"] or "N/A", info["closing_time"] or "N/A"
+        visit_duration = info["visit_duration"] or "N/A"
+
+        self.content_frame.map_frame.tour_creator_frame.update_idletasks()
+        available_width = max(self.content_frame.map_frame.tour_creator_frame._parent_canvas.winfo_width() - 30, 1)
+
+        tour_location_frame = Frame(self.content_frame.map_frame.tour_creator_frame, bg="#000000")
+        tour_location_frame.grid_columnconfigure(0, weight=1)
+        tour_location_frame.pack(fill="x", padx=10, pady=5)
+        self.tour_locations.append(tour_location_frame)
+
+        ctk.CTkLabel(tour_location_frame, text=name, font=("Arial", 12, "bold"), justify="center", wraplength=available_width).grid(row=0, column=0, padx=5, pady=5)
+        ctk.CTkLabel(tour_location_frame, text=f"Working Hours: {opening_time} - {closing_time}", font=("Arial", 12), justify="center", wraplength=available_width).grid(row=1, column=0, padx=5, pady=5)
+        ctk.CTkLabel(tour_location_frame, text=f"Visit Duration: {visit_duration}", font=("Arial", 12), justify="center", wraplength=available_width).grid(row=2, column=0, padx=5, pady=5)
+
+        button = ctk.CTkButton(tour_location_frame, text="Remove Location", command=lambda frame=tour_location_frame: self.remove_location(frame), fg_color="#343638")
+        button.grid(row=3, column=0, padx=5, pady=5)
+
+    def remove_location(self, frame):
+        if frame in self.tour_locations:
+            self.tour_locations.remove(frame)
+
+        frame.destroy()
 
 if __name__ == "__main__":
     app = Navbar()
